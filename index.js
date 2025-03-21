@@ -8,6 +8,10 @@ const workPermitRoutes = require("./database/workpermits");
 const attendenceRoutes = require("./database/attendence");
 const positionRoutes = require("./database/position");
 const employeePositionRoutes = require("./database/employeePosition");
+const categoryRoutes = require("./database/category");
+const productRoutes = require("./database/product");
+const rawMaterialRoutes = require("./database/rawMaterial");
+const productProductionRoutes = require("./database/productProduction");
 
 const app = express();
 app.use(bodyParser.json());
@@ -24,6 +28,19 @@ app.use("/attendences", attendenceRoutes);
 app.use("/positions", positionRoutes);
 //
 app.use("/employee-positions", employeePositionRoutes);
+//
+app.use("/categories", categoryRoutes);
+//
+app.use("/products", productRoutes);
+//
+app.use("/raw-materials", rawMaterialRoutes);
+//
+app.use("/product-production", productProductionRoutes);
+
+
+
+
+
 
 
 
