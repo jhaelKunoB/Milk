@@ -5,86 +5,70 @@ const db = require("./db");
 
 // POST para crear una nueva producción con lote
 router.post("/", (req, res) => {
-    const { partNumber, quantity, price, expirationDate, product_idProduct, startDate, endDate, rawMaterials } = req.body;
-  
-    if (!partNumber || !quantity || !price || !expirationDate || !product_idProduct || !startDate || !endDate || !rawMaterials || !Array.isArray(rawMaterials)) {
+  const { productsProductions, startDate, endDate } = req.body;
+
+  if (!Array.isArray(productsProductions) || productsProductions.length === 0 || !startDate || !endDate) {
       return res.status(400).send("Por favor, completa todos los campos correctamente.");
-    }
-  
-    const queryInsertBatch = `
-      INSERT INTO productionBatch (startDate, endDate)
-      VALUES (?, ?)
-    `;
-  
-    console.log(req.body)
-    db.beginTransaction(err => {
+  }
+
+  const queryInsertBatch = `
+    INSERT INTO productionBatch (startDate, endDate)
+    VALUES (?, ?)
+  `;
+
+  db.beginTransaction(err => {
       if (err) {
-        return res.status(500).send("Error al iniciar la transacción.");
+          return res.status(500).send("Error al iniciar la transacción.");
       }
-  
+
       // Insertar productionBatch primero
       db.query(queryInsertBatch, [startDate, endDate], (err, batchResult) => {
-        if (err) {
-          return db.rollback(() => {
-            res.status(500).send("Error al crear el lote de producción.");
-          });
-        }
-        
-        const productionBatchId = batchResult.insertId;  // Obtener el ID generado
-  
-        const queryInsertProductProduction = `
-          INSERT INTO productProduction (partNumber, enterDate, quantity, price, expirationDate, product_idProduct, productionBatch_idProductionBatch)
-          VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?)
-        `;
-  
-        db.query(
-          queryInsertProductProduction,
-          [partNumber, quantity, price, expirationDate, product_idProduct, productionBatchId],
-          (err, productionResult) => {
-            if (err) {
+          if (err) {
               return db.rollback(() => {
-                res.status(500).send("Error al crear producción.");
-              });
-            }
-  
-            const productProductionId = productionResult.insertId;
-  
-            const queryInsertRawMaterial = `
-              INSERT INTO productProductionRawMaterial (rawMaterial_idRawMaterial, productProduction_idProductProduction)
-              VALUES (?, ?)
-            `;
-  
-            // Insertar materias primas
-            const rawMaterialInserts = rawMaterials.map(rawMaterialId => {
-              return new Promise((resolve, reject) => {
-                db.query(queryInsertRawMaterial, [rawMaterialId, productProductionId], (err) => {
-                  if (err) return reject(err);
-                  resolve();
-                });
-              });
-            });
-  
-            Promise.all(rawMaterialInserts)
-              .then(() => {
-                db.commit(err => {
-                  if (err) {
-                    return db.rollback(() => {
-                      res.status(500).send("Error al confirmar la transacción.");
-                    });
-                  }
-                  res.status(201).send("Producción y lote creados con éxito.");
-                });
-              })
-              .catch(err => {
-                db.rollback(() => {
-                  res.status(500).send("Error al asociar materias primas.");
-                });
+                  res.status(500).send("Error al crear el lote de producción.");
               });
           }
-        );
+          
+          const productionBatchId = batchResult.insertId; // Obtener el ID generado
+  
+          const queryInsertProductProduction = `
+            INSERT INTO productProduction (partNumber, enterDate, quantity, price, expirationDate, product_idProduct, productionBatch_idProductionBatch)
+            VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?)
+          `;
+
+          const productInserts = productsProductions.map(({ partNumber, quantity, price, expirationDate, product_idProduct }) => {
+              return new Promise((resolve, reject) => {
+                  db.query(
+                      queryInsertProductProduction,
+                      [partNumber, quantity, price, expirationDate, product_idProduct, productionBatchId],
+                      (err) => {
+                          if (err) return reject(err);
+                          resolve();
+                      }
+                  );
+              });
+          });
+
+          Promise.all(productInserts)
+              .then(() => {
+                  db.commit(err => {
+                      if (err) {
+                          return db.rollback(() => {
+                              res.status(500).send("Error al confirmar la transacción.");
+                          });
+                      }
+                      res.status(201).send("Producción y lote creados con éxito.");
+                  });
+              })
+              .catch(err => {
+                  db.rollback(() => {
+                      res.status(500).send("Error al registrar los productos en la producción.");
+                  });
+              });
       });
-    });
   });
+});
+
 
 
 // GET para obtener todas las producciones activas con materias primas como lista de objetos

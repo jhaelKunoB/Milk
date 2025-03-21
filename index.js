@@ -12,6 +12,7 @@ const categoryRoutes = require("./database/category");
 const productRoutes = require("./database/product");
 const rawMaterialRoutes = require("./database/rawMaterial");
 const productProductionRoutes = require("./database/productProduction");
+const productionBatch = require("./database/productionBatch");
 
 const app = express();
 app.use(bodyParser.json());
@@ -36,6 +37,8 @@ app.use("/products", productRoutes);
 app.use("/raw-materials", rawMaterialRoutes);
 //
 app.use("/product-production", productProductionRoutes);
+//
+app.use("/production_batch", productionBatch);
 
 
 
